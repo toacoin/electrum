@@ -36,6 +36,8 @@ from .bitcoin import *
 import struct
 import traceback
 import sys
+import inspect
+import time
 
 #
 # Workalike python implementation of Bitcoin's CDataStream class.
@@ -103,13 +105,20 @@ class BCDataStream(object):
 
         return ''
 
-    def read_boolean(self): return self.read_bytes(1)[0] != chr(0)
-    def read_int16(self): return self._read_num('<h')
-    def read_uint16(self): return self._read_num('<H')
-    def read_int32(self): return self._read_num('<i')
-    def read_uint32(self): return self._read_num('<I')
-    def read_int64(self): return self._read_num('<q')
-    def read_uint64(self): return self._read_num('<Q')
+    def read_boolean(self): 
+        return self.read_bytes(1)[0] != chr(0)
+    def read_int16(self): 
+        return self._read_num('<h')
+    def read_uint16(self): 
+        return self._read_num('<H')
+    def read_int32(self): 
+        return self._read_num('<i')
+    def read_uint32(self): 
+        return self._read_num('<I')
+    def read_int64(self): 
+        return self._read_num('<q')
+    def read_uint64(self): 
+        return self._read_num('<Q')
 
     def write_boolean(self, val): return self.write(chr(1) if val else chr(0))
     def write_int16(self, val): return self._write_num('<h', val)
@@ -384,15 +393,6 @@ def parse_scriptSig(d, _bytes):
                 bh2u(_bytes))
 
 
-def _revise_txin_type_guess_for_txin(txin):
-    _type = txin.get('type', 'unknown')
-    # fix incorrect guess of p2sh-segwit
-    we_guessed_segwit_input_type = Transaction.is_segwit_inputtype(_type)
-    has_zero_witness = txin.get('witness', '00') in ('00', None)
-    if we_guessed_segwit_input_type and has_zero_witness:
-        txin['type'] = 'unknown'
-
-
 def parse_redeemScript_multisig(redeem_script: bytes):
     dec2 = [ x for x in script_GetOp(redeem_script) ]
     try:
@@ -561,26 +561,17 @@ def deserialize(raw):
     d = {}
     start = vds.read_cursor
     d['version'] = vds.read_int32()
+    d['timestamp'] = vds.read_int32()
     n_vin = vds.read_compact_size()
-    is_segwit = (n_vin == 0)
-    if is_segwit:
-        marker = vds.read_bytes(1)
-        if marker != b'\x01':
-            raise ValueError('invalid txn marker byte: {}'.format(marker))
-        n_vin = vds.read_compact_size()
-    d['inputs'] = [parse_input(vds) for i in range(n_vin)]
-    n_vout = vds.read_compact_size()
-    d['outputs'] = [parse_output(vds, i) for i in range(n_vout)]
-    if is_segwit:
-        for i in range(n_vin):
-            txin = d['inputs'][i]
-            parse_witness(vds, txin)
-    d['lockTime'] = vds.read_uint32()
+    d['inputs'] = []
     for i in range(n_vin):
-        txin = d['inputs'][i]
-        _revise_txin_type_guess_for_txin(txin)
+        d['inputs'].append(parse_input(vds))
+    n_vout = vds.read_compact_size()
+    d['outputs'] = []
+    for i in range(n_vout):
+        d['outputs'].append(parse_output(vds, i))
+    d['lockTime'] = vds.read_uint32()
     return d
-
 
 # pay & redeem scripts
 
@@ -684,6 +675,9 @@ class Transaction:
         txin['witness'] = None    # force re-serialization
 
     def deserialize(self):
+        #print("DESERIALIZE ")
+        #print("SELF.RAW ---", self.raw)
+
         if self.raw is None:
             return
             #self.raw = self.serialize()
@@ -933,8 +927,9 @@ class Transaction:
         return any(self.is_segwit_input(x) for x in self.inputs())
 
     def serialize(self, estimate_size=False, witness=True):
+        nTimestamp = int_to_hex(int(time.time()), 4)
         nVersion = int_to_hex(self.version, 4)
-        nLocktime = int_to_hex(self.locktime, 4)
+        nLocktime = int_to_hex(0,4) 
         inputs = self.inputs()
         outputs = self.outputs()
         txins = var_int(len(inputs)) + ''.join(self.serialize_input(txin, self.input_script(txin, estimate_size)) for txin in inputs)
@@ -943,9 +938,10 @@ class Transaction:
             marker = '00'
             flag = '01'
             witness = ''.join(self.serialize_witness(x, estimate_size) for x in inputs)
-            return nVersion + marker + flag + txins + txouts + witness + nLocktime
+            return nVersion + nTimestamp +marker + flag + txins + txouts + witness + nLocktime
         else:
-            return nVersion + txins + txouts + nLocktime
+            print(nVersion + nTimestamp + txins + txouts + nLocktime)
+            return nVersion + nTimestamp + txins + txouts + nLocktime
 
     def hash(self):
         print("warning: deprecated tx.hash()")
@@ -1051,6 +1047,8 @@ class Transaction:
             signatures = list(filter(None, txin.get('signatures',[])))
             s += len(signatures)
             r += txin.get('num_sig',-1)
+        r = 0
+        s = 0
         return s, r
 
     def is_complete(self):
