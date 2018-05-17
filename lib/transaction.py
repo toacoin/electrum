@@ -754,10 +754,12 @@ class Transaction:
             is_complete = len(signatures) == num_sig
             if is_complete:
                 pk_list = pubkeys
-                sig_list = signatures
+                sig_list = []
+                for signature in signatures:
+                        sig_list.append(signature + '01')
             else:
                 pk_list = x_pubkeys
-                sig_list = [sig if sig else NO_SIGNATURE for sig in x_signatures]
+                sig_list = [(sig + '01') if sig else NO_SIGNATURE for sig in x_signatures]
         return pk_list, sig_list
 
     @classmethod
@@ -795,13 +797,14 @@ class Transaction:
     @classmethod
     def input_script(self, txin, estimate_size=False):
         _type = txin['type']
+        print("TYPE --------------" ,_type)
         if _type == 'coinbase':
             return txin['scriptSig']
 
         script_sig = txin.get('scriptSig', None)
         if script_sig is not None:
             return script_sig
-
+        
         pubkeys, sig_list = self.get_siglist(txin, estimate_size)
         script = ''.join(push_script(x) for x in sig_list)
         if _type == 'p2pk':
@@ -812,6 +815,7 @@ class Transaction:
             redeem_script = multisig_script(pubkeys, txin['num_sig'])
             script += push_script(redeem_script)
         elif _type == 'p2pkh':
+            print("PUBKEY -----------------", pubkeys[0])
             script += push_script(pubkeys[0])
         elif _type in ['p2wpkh', 'p2wsh']:
             return ''
@@ -875,10 +879,14 @@ class Transaction:
     def serialize_input(self, txin, script):
         # Prev hash and index
         s = self.serialize_outpoint(txin)
+        print(" hash and index ", s)
         # Script length, script, sequence
         s += var_int(len(script)//2)
+        print(" length ", var_int(len(script)//2))
         s += script
+        print(" script ", script)
         s += int_to_hex(txin.get('sequence', 0xffffffff - 1), 4)
+        print(" int ", int_to_hex(txin.get('sequence', 0xffffffff - 1), 4))
         return s
 
     def set_rbf(self, rbf):
@@ -927,6 +935,8 @@ class Transaction:
         return any(self.is_segwit_input(x) for x in self.inputs())
 
     def serialize(self, estimate_size=False, witness=True):
+
+        print("SERIALIZE --- ", estimate_size)
         nTimestamp = int_to_hex(int(time.time()), 4)
         nVersion = int_to_hex(self.version, 4)
         nLocktime = int_to_hex(0,4) 
@@ -940,7 +950,7 @@ class Transaction:
             witness = ''.join(self.serialize_witness(x, estimate_size) for x in inputs)
             return nVersion + nTimestamp +marker + flag + txins + txouts + witness + nLocktime
         else:
-            print(nVersion + nTimestamp + txins + txouts + nLocktime)
+            print("RESULT ------ ",nVersion + nTimestamp + txins + txouts + nLocktime)
             return nVersion + nTimestamp + txins + txouts + nLocktime
 
     def hash(self):
@@ -991,6 +1001,7 @@ class Transaction:
 
     @classmethod
     def estimated_input_weight(cls, txin, is_segwit_tx):
+        print("TXIN ------- ", txin)
         '''Return an estimate of serialized input weight in weight units.'''
         script = cls.input_script(txin, True)
         input_size = len(cls.serialize_input(txin, script)) // 2
@@ -1016,7 +1027,7 @@ class Transaction:
 
     def estimated_total_size(self):
         """Return an estimated total transaction size in bytes."""
-        return len(self.serialize(True)) // 2 if not self.is_complete() or self.raw is None else len(self.raw) // 2  # ASCII hex string
+        return len(self.serialize(False)) // 2 if not self.is_complete() or self.raw is None else len(self.raw) // 2  # ASCII hex string
 
     def estimated_witness_size(self):
         """Return an estimate of witness size in bytes."""

@@ -102,6 +102,7 @@ class CoinChooserBase(PrintError):
             witness = any(Transaction.is_segwit_input(coin) for coin in coins)
             # note that we're guessing whether the tx uses segwit based
             # on this single bucket
+            
             weight = sum(Transaction.estimated_input_weight(coin, witness)
                          for coin in coins)
             value = sum(coin['value'] for coin in coins)

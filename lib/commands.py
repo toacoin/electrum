@@ -113,6 +113,8 @@ class Commands:
         else:
             result = f(*args)
 
+        #print ("RESULT ---------- ", result)
+
         if self._callback:
             self._callback()
         return result
