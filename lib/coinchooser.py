@@ -210,7 +210,8 @@ class CoinChooserBase(PrintError):
         spent_amount = tx.output_value()
 
         def fee_estimator_w(weight):
-            return fee_estimator(Transaction.virtual_size_from_weight(weight))
+            #fee should be minimum 0.1TOA
+            return 10000 + fee_estimator(Transaction.virtual_size_from_weight(weight))
 
         def get_tx_weight(buckets):
             total_weight = base_weight + sum(bucket.weight for bucket in buckets)
@@ -250,7 +251,10 @@ class CoinChooserBase(PrintError):
 
         # This takes a count of change outputs and returns a tx fee
         output_weight = 4 * Transaction.estimated_output_size(change_addrs[0])
+        #fee should be a minimum of 0.1 TOA
         fee = lambda count: fee_estimator_w(tx_weight + count * output_weight)
+        
+
         change = self.change_outputs(tx, change_addrs, fee, dust_threshold)
         tx.add_outputs(change)
 

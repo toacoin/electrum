@@ -155,9 +155,7 @@ class Network(util.DaemonThread):
     servers, each connected socket is handled by an Interface() object.
     Connections are initiated by a Connection() thread which stops once
     the connection succeeds or fails.
-
     Our external API:
-
     - Member functions get_header(), get_interfaces(), get_local_height(),
           get_parameters(), get_server_height(), get_status_value(),
           is_connected(), set_parameters(), stop()
@@ -807,8 +805,6 @@ class Network(util.DaemonThread):
 
     def request_header(self, interface, height):
         #interface.print_error("requesting header %d" % height)
-        if height < 0:
-            height = 1
         self.queue_request('blockchain.block.get_header', [height], interface)
         interface.request = height
         interface.req_time = time.time()
@@ -992,6 +988,7 @@ class Network(util.DaemonThread):
         self.on_stop()
 
     def on_notify_header(self, interface, header):
+               
         height = header.get('block_height')
         if not height:
             return
@@ -1090,6 +1087,7 @@ class Network(util.DaemonThread):
         return True, out
 
     def export_checkpoints(self, path):
+        print("ARE WE HERE---------------")
         # run manually from the console to generate checkpoints
         cp = self.blockchain().get_checkpoints()
         with open(path, 'w', encoding='utf-8') as f:
