@@ -31,6 +31,7 @@ from typing import Sequence, Union
 
 from .util import print_error, profiler
 
+from . import ecc
 from . import bitcoin
 from .bitcoin import *
 import struct
@@ -105,20 +106,13 @@ class BCDataStream(object):
 
         return ''
 
-    def read_boolean(self): 
-        return self.read_bytes(1)[0] != chr(0)
-    def read_int16(self): 
-        return self._read_num('<h')
-    def read_uint16(self): 
-        return self._read_num('<H')
-    def read_int32(self): 
-        return self._read_num('<i')
-    def read_uint32(self): 
-        return self._read_num('<I')
-    def read_int64(self): 
-        return self._read_num('<q')
-    def read_uint64(self): 
-        return self._read_num('<Q')
+    def read_boolean(self): return self.read_bytes(1)[0] != chr(0)
+    def read_int16(self): return self._read_num('<h')
+    def read_uint16(self): return self._read_num('<H')
+    def read_int32(self): return self._read_num('<i')
+    def read_uint32(self): return self._read_num('<I')
+    def read_int64(self): return self._read_num('<q')
+    def read_uint64(self): return self._read_num('<Q')
 
     def write_boolean(self, val): return self.write(chr(1) if val else chr(0))
     def write_int16(self, val): return self._write_num('<h', val)
@@ -458,21 +452,17 @@ def parse_input(vds):
     d['signatures'] = {}
     d['address'] = None
     d['num_sig'] = 0
+    d['scriptSig'] = bh2u(scriptSig)
     if prevout_hash == '00'*32:
         d['type'] = 'coinbase'
-        d['scriptSig'] = bh2u(scriptSig)
     else:
         d['type'] = 'unknown'
         if scriptSig:
-            d['scriptSig'] = bh2u(scriptSig)
             try:
                 parse_scriptSig(d, scriptSig)
             except BaseException:
                 traceback.print_exc(file=sys.stderr)
                 print_error('failed to parse scriptSig', bh2u(scriptSig))
-        else:
-            d['scriptSig'] = ''
-
     return d
 
 
@@ -650,18 +640,18 @@ class Transaction:
                 if sig in sigs1:
                     continue
                 pre_hash = Hash(bfh(self.serialize_preimage(i)))
-                # der to string
-                order = ecdsa.ecdsa.generator_secp256k1.order()
-                r, s = ecdsa.util.sigdecode_der(bfh(sig[:-2]), order)
-                sig_string = ecdsa.util.sigencode_string(r, s, order)
-                compressed = True
+                sig_string = ecc.sig_string_from_der_sig(bfh(sig[:-2]))
                 for recid in range(4):
-                    public_key = MyVerifyingKey.from_signature(sig_string, recid, pre_hash, curve = SECP256k1)
-                    pubkey = bh2u(point_to_ser(public_key.pubkey.point, compressed))
-                    if pubkey in pubkeys:
-                        public_key.verify_digest(sig_string, pre_hash, sigdecode = ecdsa.util.sigdecode_string)
-                        j = pubkeys.index(pubkey)
-                        print_error("adding sig", i, j, pubkey, sig)
+                    try:
+                        public_key = ecc.ECPubkey.from_sig_string(sig_string, recid, pre_hash)
+                    except ecc.InvalidECPointException:
+                        # the point might not be on the curve for some recid values
+                        continue
+                    pubkey_hex = public_key.get_public_key_hex(compressed=True)
+                    if pubkey_hex in pubkeys:
+                        public_key.verify_message_hash(sig_string, pre_hash)
+                        j = pubkeys.index(pubkey_hex)
+                        print_error("adding sig", i, j, pubkey_hex, sig)
                         self.add_signature_to_txin(self._inputs[i], j, sig)
                         #self._inputs[i]['x_pubkeys'][j] = pubkey
                         break
@@ -797,8 +787,12 @@ class Transaction:
         if _type == 'coinbase':
             return txin['scriptSig']
 
+        # If there is already a saved scriptSig, just return that.
+        # This allows manual creation of txins of any custom type.
+        # However, if the txin is not complete, we might have some garbage
+        # saved from our partial txn ser format, so we re-serialize then.
         script_sig = txin.get('scriptSig', None)
-        if script_sig is not None:
+        if script_sig is not None and self.is_txin_complete(txin):
             return script_sig
         
         pubkeys, sig_list = self.get_siglist(txin, estimate_size)
@@ -1073,7 +1067,7 @@ class Transaction:
                 if x_pubkey in keypairs.keys():
                     print_error("adding signature for", x_pubkey)
                     sec, compressed = keypairs.get(x_pubkey)
-                    pubkey = public_key_from_private_key(sec, compressed)
+                    pubkey = ecc.ECPrivkey(sec).get_public_key_hex(compressed=compressed)
                     # add signature
                     sig = self.sign_txin(i, sec)
                     self.add_signature_to_txin(txin, j, sig)
@@ -1085,13 +1079,8 @@ class Transaction:
 
     def sign_txin(self, txin_index, privkey_bytes):
         pre_hash = Hash(bfh(self.serialize_preimage(txin_index)))
-        pkey = regenerate_key(privkey_bytes)
-        secexp = pkey.secret
-        private_key = bitcoin.MySigningKey.from_secret_exponent(secexp, curve=SECP256k1)
-        public_key = private_key.get_verifying_key()
-        sig = private_key.sign_digest_deterministic(pre_hash, hashfunc=hashlib.sha256, sigencode=ecdsa.util.sigencode_der)
-        if not public_key.verify_digest(sig, pre_hash, sigdecode=ecdsa.util.sigdecode_der):
-            raise Exception('Sanity check verifying our own signature failed.')
+        privkey = ecc.ECPrivkey(privkey_bytes)
+        sig = privkey.sign_transaction(pre_hash)
         sig = bh2u(sig) + '01'
         print("SIG ------------", sig)
         return sig

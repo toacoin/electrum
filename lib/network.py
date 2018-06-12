@@ -43,6 +43,8 @@ from . import blockchain
 from .version import ELECTRUM_VERSION, PROTOCOL_VERSION
 from .i18n import _
 
+import inspect
+
 
 NODES_RETRY_INTERVAL = 60
 SERVER_RETRY_INTERVAL = 10
@@ -200,9 +202,7 @@ class Network(util.DaemonThread):
         self.callbacks = defaultdict(list)
 
         dir_path = os.path.join( self.config.path, 'certs')
-        if not os.path.exists(dir_path):
-            os.mkdir(dir_path)
-            os.chmod(dir_path, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
+        util.make_dir(dir_path)
 
         # subscriptions and requests
         self.subscribed_addresses = set()
@@ -524,12 +524,14 @@ class Network(util.DaemonThread):
         self.save_recent_servers()
 
     def process_response(self, interface, response, callbacks):
+        #print (inspect.stack()[1][3], "-> process_response")
         if self.debug:
             self.print_error("<--", response)
         error = response.get('error')
         result = response.get('result')
         method = response.get('method')
         params = response.get('params')
+        ##print("RESPONSE ----", response)
 
         # We handle some responses; return the rest to the client.
         if method == 'server.version':
@@ -577,6 +579,7 @@ class Network(util.DaemonThread):
         return str(method) + (':' + str(params[0]) if params else '')
 
     def process_responses(self, interface):
+        #print (inspect.stack()[1][3], "-> process_responses")
         responses = interface.get_responses()
         for request, response in responses:
             if request:
@@ -610,7 +613,7 @@ class Network(util.DaemonThread):
                 params = response.get('params')
                 k = self.get_index(method, params)
                 if method == 'blockchain.headers.subscribe':
-                    response['result'] = params[0]
+                    response['result'] = params[0]                    
                     response['params'] = []
                 elif method == 'blockchain.scripthash.subscribe':
                     response['params'] = [params[0]]  # addr
@@ -623,13 +626,7 @@ class Network(util.DaemonThread):
             # Response is now in canonical form
             self.process_response(interface, response, callbacks)
 
-    def addr_to_scripthash(self, addr):
-        h = bitcoin.address_to_scripthash(addr)
-        if h not in self.h2addr:
-            self.h2addr[h] = addr
-        return h
-
-    def overload_cb(self, callback):
+    def map_scripthash_to_address(self, callback):
         def cb2(x):
             x2 = x.copy()
             p = x2.pop('params')
@@ -639,13 +636,15 @@ class Network(util.DaemonThread):
         return cb2
 
     def subscribe_to_addresses(self, addresses, callback):
-        hashes = [self.addr_to_scripthash(addr) for addr in addresses]
-        msgs = [('blockchain.scripthash.subscribe', [x]) for x in hashes]
-        self.send(msgs, self.overload_cb(callback))
+        hash2address = {bitcoin.address_to_scripthash(address): address for address in addresses}
+        self.h2addr.update(hash2address)
+        msgs = [('blockchain.scripthash.subscribe', [x]) for x in hash2address.keys()]
+        self.send(msgs, self.map_scripthash_to_address(callback))
 
     def request_address_history(self, address, callback):
-        h = self.addr_to_scripthash(address)
-        self.send([('blockchain.scripthash.get_history', [h])], self.overload_cb(callback))
+        h = bitcoin.address_to_scripthash(address)
+        self.h2addr.update({h: address})
+        self.send([('blockchain.scripthash.get_history', [h])], self.map_scripthash_to_address(callback))
 
     def send(self, messages, callback):
         '''Messages is a list of (method, params) tuples'''
@@ -715,7 +714,7 @@ class Network(util.DaemonThread):
         interface.mode = 'default'
         interface.request = None
         self.interfaces[server] = interface
-        self.queue_request('blockchain.headers.subscribe', [], interface)
+        self.queue_request('blockchain.headers.subscribe', [True], interface)
         if server == self.default_server:
             self.switch_to_interface(server)
         #self.notify('interfaces')
@@ -773,16 +772,18 @@ class Network(util.DaemonThread):
         self.requested_chunks.add(index)
         self.queue_request('blockchain.block.get_chunk', [index], interface)
 
-    def on_get_chunk(self, interface, response):
+    def on_get_chunk(self, interface, response):        
         '''Handle receiving a chunk of block headers'''
         error = response.get('error')
         result = response.get('result')
         params = response.get('params')
+        print (inspect.stack()[1][3], "-> on_get_chunk")
         blockchain = interface.blockchain
         if result is None or params is None or error is not None:
             interface.print_error(error or 'bad response')
             return
         index = params[0]
+        #print("INDEX ---- ", index)
         # Ignore unsolicited chunks
         if index not in self.requested_chunks:
             interface.print_error("received chunk %d (unsolicited)" % index)
@@ -804,26 +805,34 @@ class Network(util.DaemonThread):
         self.notify('updated')
 
     def request_header(self, interface, height):
-        #interface.print_error("requesting header %d" % height)
+        #interface.print_error("requesting header %d" % height)        
         self.queue_request('blockchain.block.get_header', [height], interface)
         interface.request = height
-        interface.req_time = time.time()
+        interface.req_time = time.time()        
+        #print (inspect.stack()[1][3], "-> request_header", height, interface.request, interface.req_time)
 
-    def on_get_header(self, interface, response):
+    def on_get_header(self, interface, response):        
         '''Handle receiving a single block header'''
         header = response.get('result')
+        ##print("header ---", header)
+        ##print("interface ---", interface)
         if not header:
             interface.print_error(response)
             self.connection_down(interface.server)
             return
         height = header.get('block_height')
+        #print (inspect.stack()[1][3], "-> on_get_header", response.get('result'), height)
+        
+        #print("height ---", height, interface.mode)
         if interface.request != height:
             interface.print_error("unsolicited header",interface.request, height)
             self.connection_down(interface.server)
             return
         chain = blockchain.check_header(header)
+        
         if interface.mode == 'backward':
             can_connect = blockchain.can_connect(header)
+            #print("can_connect ---", can_connect)
             if can_connect and can_connect.catch_up is None:
                 interface.mode = 'catch_up'
                 interface.blockchain = can_connect
@@ -845,7 +854,9 @@ class Network(util.DaemonThread):
                     interface.bad = height
                     interface.bad_header = header
                     delta = interface.tip - height
-                    next_height = max(self.max_checkpoint(), interface.tip - 2 * delta)
+                    next_height = max(self.max_checkpoint(), interface.tip - 2 * delta) 
+                    next_height = next_height + 1
+                    ##print("next_height ---", next_height, self.max_checkpoint(), interface.tip, delta)
 
         elif interface.mode == 'binary':
             if chain:
@@ -872,7 +883,7 @@ class Network(util.DaemonThread):
                         next_height = None
                     else:
                         interface.print_error('checkpoint conflicts with existing fork', branch.path())
-                        branch.write('', 0)
+                        branch.write(b'', 0)
                         branch.save_header(interface.bad_header)
                         interface.mode = 'catch_up'
                         interface.blockchain = branch
@@ -924,6 +935,7 @@ class Network(util.DaemonThread):
             raise Exception(interface.mode)
         # If not finished, get the next header
         if next_height:
+            ##print("next height!", next_height)
             if interface.mode == 'catch_up' and interface.tip > next_height + 50:
                 self.request_chunk(interface, next_height // 2016)
             else:
@@ -945,6 +957,7 @@ class Network(util.DaemonThread):
     def wait_on_sockets(self):
         # Python docs say Windows doesn't like empty selects.
         # Sleep to prevent busy looping
+        #print (inspect.stack()[1][3], "-> wait_on_sockets")
         if not self.interfaces:
             time.sleep(0.1)
             return
@@ -965,6 +978,7 @@ class Network(util.DaemonThread):
             self.process_responses(interface)
 
     def init_headers_file(self):
+        #print (inspect.stack()[1][3], "->init_headers_file")
         b = self.blockchains[0]
         filename = b.path()
         length = 80 * len(constants.net.CHECKPOINTS) * 2016
@@ -987,19 +1001,21 @@ class Network(util.DaemonThread):
         self.stop_network()
         self.on_stop()
 
-    def on_notify_header(self, interface, header):
-               
-        height = header.get('block_height')
-        if not height:
-            return
+    def on_notify_header(self, interface, header_dict):
+        ##print("===========================on_notify_header ========================= ")
+        #print (inspect.stack()[1][3], "-> on_notify_header", header_dict['hex'], header_dict['height'], self.max_checkpoint())
+        header_hex, height = header_dict['hex'], header_dict['height']
+        header = blockchain.deserialize_header(bfh(header_hex), height)
+
         if height < self.max_checkpoint():
             self.connection_down(interface.server)
             return
         interface.tip_header = header
-        interface.tip = height
+        interface.tip = height        
         if interface.mode != 'default':
             return
         b = blockchain.check_header(header)
+        #print ("BLOCKCHAIN ----------------", b)
         if b:
             interface.blockchain = b
             self.switch_lagging_interface()
@@ -1018,7 +1034,7 @@ class Network(util.DaemonThread):
         if tip >=0:
             interface.mode = 'backward'
             interface.bad = height
-            interface.bad_header = header
+            interface.bad_header = header            
             self.request_header(interface, min(tip +1, height - 1))
         else:
             chain = self.blockchains[0]
@@ -1030,6 +1046,7 @@ class Network(util.DaemonThread):
                 self.request_header(interface, 0)
             else:
                 self.print_error("chain already catching up with", chain.catch_up.server)
+        ##print("===========================on_notify_header ========================= ")
 
     def blockchain(self):
         if self.interface and self.interface.blockchain is not None:
@@ -1087,11 +1104,12 @@ class Network(util.DaemonThread):
         return True, out
 
     def export_checkpoints(self, path):
-        print("ARE WE HERE---------------")
+        ##print("ARE WE HERE---------------")
         # run manually from the console to generate checkpoints
         cp = self.blockchain().get_checkpoints()
         with open(path, 'w', encoding='utf-8') as f:
             f.write(json.dumps(cp, indent=4))
 
     def max_checkpoint(self):
+        #print (inspect.stack()[1][3], "-> max_checkpoint", len(constants.net.CHECKPOINTS) * 2016 - 1)
         return max(0, len(constants.net.CHECKPOINTS) * 2016 - 1)
