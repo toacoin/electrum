@@ -28,7 +28,37 @@ from . import bitcoin
 from . import constants
 from .bitcoin import *
 
+import inspect
+
+try:
+    import scrypt
+    getPoWHash = lambda x: scrypt.hash(x, x, N=1024, r=1, p=1, buflen=32)
+except ImportError:
+    util.print_msg("Warning: package scrypt not available; synchronization could be very slow")
+    from .scrypt import scrypt_1024_1_1_80 as getPoWHash
+
 MAX_TARGET = 0x00000000FFFF0000000000000000000000000000000000000000000000000000
+
+
+class MissingHeader(Exception):
+    pass
+
+
+def print_header_info(res):
+    print("version", int_to_hex(res.get('version'), 4))
+    print("prev_block_hash", res.get('prev_block_hash'), rev_hex(res.get('prev_block_hash')))
+    print("merkle_root", res.get('merkle_root'), rev_hex(res.get('merkle_root')))
+    
+    timestamp=str(int_to_hex(int(res.get('timestamp')), 4))
+    timestamp=rev_hex(timestamp)
+    bits=str(int_to_hex(int(res.get('bits')), 4))
+    bits=rev_hex(bits)
+    nonce=str(int_to_hex(int(res.get('nonce')), 4))
+    nonce=rev_hex(nonce)
+    print("timestamp", timestamp)
+    print("bits", bits)
+    print("nonce", nonce)
+
 
 def serialize_header(res):
     s = int_to_hex(res.get('version'), 4) \
@@ -37,6 +67,7 @@ def serialize_header(res):
         + int_to_hex(int(res.get('timestamp')), 4) \
         + int_to_hex(int(res.get('bits')), 4) \
         + int_to_hex(int(res.get('nonce')), 4)
+    #print("SERIALIZED: ", s)
     return s
 
 def deserialize_header(s, height):
@@ -60,7 +91,13 @@ def hash_header(header):
         return '0' * 64
     if header.get('prev_block_hash') is None:
         header['prev_block_hash'] = '00'*32
-    return hash_encode(Hash(bfh(serialize_header(header))))
+    s=serialize_header(header)
+     
+    header_=hash_encode(getPoWHash(bfh(serialize_header(header))))
+
+
+    #print("hash_header header_: " , header_)
+    return header_
 
 
 blockchains = {}
@@ -68,8 +105,7 @@ blockchains = {}
 def read_blockchains(config):
     blockchains[0] = Blockchain(config, 0, None)
     fdir = os.path.join(util.get_headers_dir(config), 'forks')
-    if not os.path.exists(fdir):
-        os.mkdir(fdir)
+    util.make_dir(fdir)
     l = filter(lambda x: x.startswith('fork_'), os.listdir(fdir))
     l = sorted(l, key = lambda x: int(x.split('_')[1]))
     for filename in l:
@@ -154,6 +190,7 @@ class Blockchain(util.PrintError):
         self._size = os.path.getsize(p)//80 if os.path.exists(p) else 0
 
     def verify_header(self, header, prev_hash, target):
+        #print (inspect.stack()[1][3], "-> verify_header", prev_hash, target)
         _hash = hash_header(header)
         if prev_hash != header.get('prev_block_hash'):
             raise Exception("prev hash mismatch: %s vs %s" % (prev_hash, header.get('prev_block_hash')))
@@ -162,16 +199,24 @@ class Blockchain(util.PrintError):
         bits = self.target_to_bits(target)
         if bits != header.get('bits'):
             raise Exception("bits mismatch: %s vs %s" % (bits, header.get('bits')))
-        if int('0x' + _hash, 16) > target:
-            raise Exception("insufficient proof of work: %s vs target %s" % (int('0x' + _hash, 16), target))
+        #TODO : check 
+        #if int('0x' + _hash, 16) > target:
+            #raise Exception("insufficient proof of work: %s vs target %s" % (int('0x' + _hash, 16), target))
+        if header.get('nonce') != 0:
+                #assert int('0x'+_hash,16) < target)
+             if int('0x' + _hash, 16) > target:
+                raise Exception("insufficient proof: %s vs target %s" % (int('0x' + _hash, 16), target))             
 
     def verify_chunk(self, index, data):
         num = len(data) // 80
         prev_hash = self.get_hash(index * 2016 - 1)
-        target = self.get_target(index-1)
+        #target = self.get_target(index-1)
         for i in range(num):
             raw_header = data[i*80:(i+1) * 80]
-            header = deserialize_header(raw_header, index*2016 + i)
+            header = deserialize_header(raw_header, index*2016 + i)            
+            #print("verify_chunk -- ", prev_hash, header.get('prev_block_hash'), header.get('height'))
+            #print_header_info(header)
+            target=self.bits_to_target(header.get('bits'))
             self.verify_header(header, prev_hash, target)
             prev_hash = hash_header(header)
 
@@ -277,6 +322,7 @@ class Blockchain(util.PrintError):
         return deserialize_header(h, height)
 
     def get_hash(self, height):
+        #print("HEIGHT INDEX------", height)
         if height == -1:
             return '0000000000000000000000000000000000000000000000000000000000000000'
         elif height == 0:
@@ -290,6 +336,7 @@ class Blockchain(util.PrintError):
             return hash_header(self.read_header(height))
 
     def get_target(self, index):
+        print (inspect.stack()[1][3], "-> get_target")
         # compute target from chunk x, used in chunk x+1
         if constants.net.TESTNET:
             return 0
@@ -297,10 +344,13 @@ class Blockchain(util.PrintError):
             return MAX_TARGET
         if index < len(self.checkpoints):
             h, t = self.checkpoints[index]
+            print("TARGET :", index, t, h)            
             return t
         # new target
         first = self.read_header(index * 2016)
         last = self.read_header(index * 2016 + 2015)
+        if not first or not last:
+            raise MissingHeader()
         bits = last.get('bits')
         target = self.bits_to_target(bits)
         nActualTimespan = last.get('timestamp') - first.get('timestamp')
@@ -331,23 +381,34 @@ class Blockchain(util.PrintError):
 
     def can_connect(self, header, check_height=True):
         if header is None:
+            self.print_error("can_connect: no header")
             return False
         height = header['block_height']
         if check_height and self.height() != height - 1:
-            #self.print_error("cannot connect at height", height)
+            self.print_error("cannot connect at height", height)
             return False
         if height == 0:
             return hash_header(header) == constants.net.GENESIS
         try:
             prev_hash = self.get_hash(height - 1)
-        except:
+        except Exception as e: 
+            #print(e)           
             return False
-        if prev_hash != header.get('prev_block_hash'):
+        if prev_hash != header.get('prev_block_hash'):       
+            self.print_error("can_connect", prev_hash, header.get('prev_block_hash'))     
             return False
-        target = self.get_target(height // 2016 - 1)
+        
         try:
+            target = self.get_target(height // 2016 - 1)  
+        except MissingHeader as e:  
+            print("MISSING HEADER ", e)   
+            return False
+        ##TODO: Check: since TOA retargets every block
+        try:
+            target=self.bits_to_target(header.get('bits'))
             self.verify_header(header, prev_hash, target)
         except BaseException as e:
+            print(e)
             return False
         return True
 
@@ -368,6 +429,8 @@ class Blockchain(util.PrintError):
         n = self.height() // 2016
         for index in range(n):
             h = self.get_hash((index+1) * 2016 -1)
+            #print("H -------------------", h)
             target = self.get_target(index)
+            #print("target -------------------", target)
             cp.append((h, target))
         return cp
