@@ -43,6 +43,7 @@ if platform.system() in ['Linux', 'FreeBSD', 'DragonFly']:
 extras_require = {
     'hardware': requirements_hw,
     'fast': ['pycryptodomex'],
+    ':python_version < "3.5"': ['typing>=3.0.0'],
 }
 extras_require['full'] = extras_require['hardware'] + extras_require['fast']
 
@@ -65,6 +66,7 @@ setup(
         'electrum_plugins.keepkey',
         'electrum_plugins.labels',
         'electrum_plugins.ledger',
+        'electrum_plugins.revealer',
         'electrum_plugins.trezor',
         'electrum_plugins.digitalbitbox',
         'electrum_plugins.trustedcoin',
@@ -76,17 +78,10 @@ setup(
         'electrum_plugins': 'plugins',
     },
     package_data={
+        '': ['*.txt', '*.json', '*.ttf', '*.otf'],
         'electrum': [
-            'servers.json',
-            'servers_testnet.json',
-            'servers_regtest.json',
-            'currencies.json',
-            'checkpoints.json',
-            'checkpoints_testnet.json',
-            'www/index.html',
-            'wordlist/*.txt',
             'locale/*/LC_MESSAGES/electrum.mo',
-        ]
+        ],
     },
     scripts=['electrum'],
     data_files=data_files,
