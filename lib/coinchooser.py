@@ -29,6 +29,8 @@ from .bitcoin import sha256, COIN, TYPE_ADDRESS, is_address
 from .transaction import Transaction
 from .util import NotEnoughFunds, PrintError
 
+import inspect
+
 
 # A simple deterministic PRNG.  Used to deterministically shuffle a
 # set of coins - the same set of coins should produce the same output.
@@ -188,6 +190,7 @@ class CoinChooserBase(PrintError):
 
     def make_tx(self, coins, outputs, change_addrs, fee_estimator,
                 dust_threshold):
+        print (inspect.stack()[1][3], "-> COIN CHOOSER ============================ make_tx")
         """Select unspent coins to spend to pay outputs.  If the change is
         greater than dust_threshold (after adding the change output to
         the transaction) it is kept, otherwise none is sent and it is
@@ -211,7 +214,7 @@ class CoinChooserBase(PrintError):
 
         def fee_estimator_w(weight):
             #fee should be minimum 0.1TOA
-            return 10000 + fee_estimator(Transaction.virtual_size_from_weight(weight))
+            return max(10000, fee_estimator(Transaction.virtual_size_from_weight(weight)))
 
         def get_tx_weight(buckets):
             total_weight = base_weight + sum(bucket.weight for bucket in buckets)
