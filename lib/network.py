@@ -43,9 +43,6 @@ from . import blockchain
 from .version import ELECTRUM_VERSION, PROTOCOL_VERSION
 from .i18n import _
 
-import inspect
-
-
 NODES_RETRY_INTERVAL = 60
 SERVER_RETRY_INTERVAL = 10
 
@@ -524,7 +521,6 @@ class Network(util.DaemonThread):
         self.save_recent_servers()
 
     def process_response(self, interface, response, callbacks):
-        #print (inspect.stack()[1][3], "-> process_response")
         if self.debug:
             self.print_error("<--", response)
         error = response.get('error')
@@ -579,7 +575,6 @@ class Network(util.DaemonThread):
         return str(method) + (':' + str(params[0]) if params else '')
 
     def process_responses(self, interface):
-        #print (inspect.stack()[1][3], "-> process_responses")
         responses = interface.get_responses()
         for request, response in responses:
             if request:
@@ -777,7 +772,6 @@ class Network(util.DaemonThread):
         error = response.get('error')
         result = response.get('result')
         params = response.get('params')
-        print (inspect.stack()[1][3], "-> on_get_chunk")
         blockchain = interface.blockchain
         if result is None or params is None or error is not None:
             interface.print_error(error or 'bad response')
@@ -808,8 +802,7 @@ class Network(util.DaemonThread):
         #interface.print_error("requesting header %d" % height)        
         self.queue_request('blockchain.block.get_header', [height], interface)
         interface.request = height
-        interface.req_time = time.time()        
-        #print (inspect.stack()[1][3], "-> request_header", height, interface.request, interface.req_time)
+        interface.req_time = time.time()   
 
     def on_get_header(self, interface, response):        
         '''Handle receiving a single block header'''
@@ -952,7 +945,6 @@ class Network(util.DaemonThread):
     def wait_on_sockets(self):
         # Python docs say Windows doesn't like empty selects.
         # Sleep to prevent busy looping
-        #print (inspect.stack()[1][3], "-> wait_on_sockets")
         if not self.interfaces:
             time.sleep(0.1)
             return

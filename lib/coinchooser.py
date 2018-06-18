@@ -29,7 +29,6 @@ from .bitcoin import sha256, COIN, TYPE_ADDRESS, is_address
 from .transaction import Transaction
 from .util import NotEnoughFunds, PrintError
 
-import inspect
 
 
 # A simple deterministic PRNG.  Used to deterministically shuffle a
@@ -190,7 +189,6 @@ class CoinChooserBase(PrintError):
 
     def make_tx(self, coins, outputs, change_addrs, fee_estimator,
                 dust_threshold):
-        print (inspect.stack()[1][3], "-> COIN CHOOSER ============================ make_tx")
         """Select unspent coins to spend to pay outputs.  If the change is
         greater than dust_threshold (after adding the change output to
         the transaction) it is kept, otherwise none is sent and it is

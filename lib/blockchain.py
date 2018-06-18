@@ -28,7 +28,6 @@ from . import bitcoin
 from . import constants
 from .bitcoin import *
 
-import inspect
 
 try:
     import scrypt

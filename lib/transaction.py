@@ -37,7 +37,6 @@ from .bitcoin import *
 import struct
 import traceback
 import sys
-import inspect
 import time
 
 #
@@ -631,7 +630,6 @@ class Transaction:
         return pubkeys, x_pubkeys
 
     def update_signatures(self, raw):
-        print (inspect.stack()[1][3], "-> update_signatures")
         """Add new signatures to a transaction"""
         d = deserialize(raw)
         for i, txin in enumerate(self.inputs()):
@@ -662,14 +660,12 @@ class Transaction:
 
     @classmethod
     def add_signature_to_txin(cls, txin, signingPos, sig):
-        print (inspect.stack()[1][3], "-> add_signature_to_txin")
         txin['signatures'][signingPos] = sig
         txin['scriptSig'] = None  # force re-serialization
         txin['witness'] = None    # force re-serialization
 
 
     def deserialize(self):
-        print (inspect.stack()[1][3], "-> deserialize(self)")
         if self.raw is None:
             return
             #self.raw = self.serialize()
@@ -693,7 +689,6 @@ class Transaction:
 
     @classmethod
     def pay_script(self, output_type, addr):
-        print (inspect.stack()[1][3], "-> pay_script", addr)
         if output_type == TYPE_SCRIPT:
             return addr
         elif output_type == TYPE_ADDRESS:
@@ -707,7 +702,6 @@ class Transaction:
 
     @classmethod
     def estimate_pubkey_size_from_x_pubkey(cls, x_pubkey):
-        print (inspect.stack()[1][3], "->estimate_pubkey_size_from_x_pubkey")
         try:
             if x_pubkey[0:2] in ['02', '03']:  # compressed pubkey
                 return 0x21
@@ -723,7 +717,6 @@ class Transaction:
 
     @classmethod
     def estimate_pubkey_size_for_txin(cls, txin):
-        print (inspect.stack()[1][3], "->estimate_pubkey_size_for_txin")
         pubkeys = txin.get('pubkeys', [])
         x_pubkeys = txin.get('x_pubkeys', [])
         if pubkeys and len(pubkeys) > 0:
@@ -735,7 +728,6 @@ class Transaction:
 
     @classmethod
     def get_siglist(self, txin, estimate_size=False):
-        print (inspect.stack()[1][3], "->get_siglist")
         # if we have enough signatures, we use the actual pubkeys
         # otherwise, use extended pubkeys (with bip32 derivation)
         if txin['type'] == 'coinbase':
@@ -763,7 +755,6 @@ class Transaction:
 
     @classmethod
     def serialize_witness(self, txin, estimate_size=False):
-        print (inspect.stack()[1][3], "->serialize_witness")
         if not self.is_segwit_input(txin):
             return '00'
         if txin['type'] == 'coinbase':
@@ -796,7 +787,6 @@ class Transaction:
 
     @classmethod
     def input_script(self, txin, estimate_size=False):
-        print (inspect.stack()[1][3], "->input_script")
         _type = txin['type']
         if _type == 'coinbase':
             return txin['scriptSig']
@@ -838,7 +828,6 @@ class Transaction:
 
     @classmethod
     def is_txin_complete(cls, txin):
-        print (inspect.stack()[1][3], "->is_txin_complete")
         if txin['type'] == 'coinbase':
             return True
         num_sig = txin.get('num_sig', 1)
@@ -848,7 +837,6 @@ class Transaction:
 
     @classmethod
     def get_preimage_script(self, txin):
-        print (inspect.stack()[1][3], "->get_preimage_script")
         preimage_script = txin.get('preimage_script', None)
         if preimage_script is not None:
             return preimage_script
@@ -870,12 +858,10 @@ class Transaction:
 
     @classmethod
     def serialize_outpoint(self, txin):
-        print (inspect.stack()[1][3], "->serialize_outpoint")
         return bh2u(bfh(txin['prevout_hash'])[::-1]) + int_to_hex(txin['prevout_n'], 4)
 
     @classmethod
     def get_outpoint_from_txin(cls, txin):
-        print (inspect.stack()[1][3], "->get_outpoint_from_txin")
         if txin['type'] == 'coinbase':
             return None
         prevout_hash = txin['prevout_hash']
@@ -884,7 +870,6 @@ class Transaction:
 
     @classmethod
     def serialize_input(self, txin, script):
-        print (inspect.stack()[1][3], "->serialize_input")
         # Prev hash and index
         s = self.serialize_outpoint(txin)
         # Script length, script, sequence
@@ -942,7 +927,6 @@ class Transaction:
         return any(self.is_segwit_input(x) for x in self.inputs())
 
     def serialize(self, estimate_size=False, witness=True):
-        print (inspect.stack()[1][3], "->serialize")
         nTimestamp = int_to_hex(self.timestamp, 4)
         nVersion = int_to_hex(self.version, 4)
         #print("nVersion -- ", nVersion)
@@ -958,7 +942,6 @@ class Transaction:
             witness = ''.join(self.serialize_witness(x, estimate_size) for x in inputs)
             return nVersion + nTimestamp +marker + flag + txins + txouts + witness + nLocktime
         else:
-            print("SERIALIZE ", nVersion + nTimestamp + txins + txouts + nLocktime)
             return nVersion + nTimestamp + txins + txouts + nLocktime
 
     def hash(self):
