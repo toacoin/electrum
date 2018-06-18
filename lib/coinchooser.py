@@ -30,6 +30,7 @@ from .transaction import Transaction
 from .util import NotEnoughFunds, PrintError
 
 
+
 # A simple deterministic PRNG.  Used to deterministically shuffle a
 # set of coins - the same set of coins should produce the same output.
 # Although choosing UTXOs "randomly" we want it to be deterministic,
@@ -211,7 +212,7 @@ class CoinChooserBase(PrintError):
 
         def fee_estimator_w(weight):
             #fee should be minimum 0.1TOA
-            return 10000 + fee_estimator(Transaction.virtual_size_from_weight(weight))
+            return max(10000, fee_estimator(Transaction.virtual_size_from_weight(weight)))
 
         def get_tx_weight(buckets):
             total_weight = base_weight + sum(bucket.weight for bucket in buckets)

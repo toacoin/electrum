@@ -28,7 +28,10 @@ from . import bitcoin
 from . import constants
 from .bitcoin import *
 
+<<<<<<< HEAD
 import inspect
+=======
+>>>>>>> origin/sendcoins
 
 try:
     import scrypt
@@ -95,8 +98,11 @@ def hash_header(header):
      
     header_=hash_encode(getPoWHash(bfh(serialize_header(header))))
 
+<<<<<<< HEAD
 
     #print("hash_header header_: " , header_)
+=======
+>>>>>>> origin/sendcoins
     return header_
 
 
@@ -199,23 +205,36 @@ class Blockchain(util.PrintError):
         bits = self.target_to_bits(target)
         if bits != header.get('bits'):
             raise Exception("bits mismatch: %s vs %s" % (bits, header.get('bits')))
+<<<<<<< HEAD
         #TODO : check 
         #if int('0x' + _hash, 16) > target:
             #raise Exception("insufficient proof of work: %s vs target %s" % (int('0x' + _hash, 16), target))
         if header.get('nonce') != 0:
                 #assert int('0x'+_hash,16) < target)
+=======
+        #TODO : review additional checking 
+        #if int('0x' + _hash, 16) > target:
+            #raise Exception("insufficient proof of work: %s vs target %s" % (int('0x' + _hash, 16), target))
+        if header.get('nonce') != 0:
+>>>>>>> origin/sendcoins
              if int('0x' + _hash, 16) > target:
                 raise Exception("insufficient proof: %s vs target %s" % (int('0x' + _hash, 16), target))             
 
     def verify_chunk(self, index, data):
         num = len(data) // 80
         prev_hash = self.get_hash(index * 2016 - 1)
+<<<<<<< HEAD
         #target = self.get_target(index-1)
         for i in range(num):
             raw_header = data[i*80:(i+1) * 80]
             header = deserialize_header(raw_header, index*2016 + i)            
             #print("verify_chunk -- ", prev_hash, header.get('prev_block_hash'), header.get('height'))
             #print_header_info(header)
+=======
+        for i in range(num):
+            raw_header = data[i*80:(i+1) * 80]
+            header = deserialize_header(raw_header, index*2016 + i)            
+>>>>>>> origin/sendcoins
             target=self.bits_to_target(header.get('bits'))
             self.verify_header(header, prev_hash, target)
             prev_hash = hash_header(header)
@@ -343,8 +362,12 @@ class Blockchain(util.PrintError):
         if index == -1:
             return MAX_TARGET
         if index < len(self.checkpoints):
+<<<<<<< HEAD
             h, t = self.checkpoints[index]
             print("TARGET :", index, t, h)            
+=======
+            h, t = self.checkpoints[index]          
+>>>>>>> origin/sendcoins
             return t
         # new target
         first = self.read_header(index * 2016)

@@ -37,7 +37,6 @@ from .bitcoin import *
 import struct
 import traceback
 import sys
-import inspect
 import time
 
 #
@@ -598,6 +597,7 @@ class Transaction:
         self._inputs = None
         self._outputs = None
         self.locktime = 0
+        self.timestamp = int(time.time())
         self.version = 1
 
     def update(self, raw):
@@ -664,6 +664,10 @@ class Transaction:
         txin['scriptSig'] = None  # force re-serialization
         txin['witness'] = None    # force re-serialization
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/sendcoins
     def deserialize(self):
         if self.raw is None:
             return
@@ -675,6 +679,7 @@ class Transaction:
         self._outputs = [(x['type'], x['address'], x['value']) for x in d['outputs']]
         self.locktime = d['lockTime']
         self.version = d['version']
+        self.timestamp=d['timestamp']
         return d
 
     @classmethod
@@ -690,9 +695,11 @@ class Transaction:
         if output_type == TYPE_SCRIPT:
             return addr
         elif output_type == TYPE_ADDRESS:
-            return bitcoin.address_to_script(addr)
+            addr_=bitcoin.address_to_script(addr)
+            return addr_
         elif output_type == TYPE_PUBKEY:
-            return bitcoin.public_key_to_p2pk_script(addr)
+            addr_=bitcoin.public_key_to_p2pk_script(addr)
+            return addr_
         else:
             raise TypeError('Unknown output type')
 
@@ -898,7 +905,11 @@ class Transaction:
         return s
 
     def serialize_preimage(self, i):
+<<<<<<< HEAD
         nTimestamp = int_to_hex(int(time.time()), 4)
+=======
+        nTimestamp = int_to_hex(self.timestamp, 4)
+>>>>>>> origin/sendcoins
         nVersion = int_to_hex(1, 4)
         nHashType = int_to_hex(1, 4)
         nLocktime = int_to_hex(self.locktime, 4)
@@ -920,16 +931,21 @@ class Transaction:
             txins = var_int(len(inputs)) + ''.join(self.serialize_input(txin, self.get_preimage_script(txin) if i==k else '') for k, txin in enumerate(inputs))
             txouts = var_int(len(outputs)) + ''.join(self.serialize_output(o) for o in outputs)
             preimage = nVersion + nTimestamp + txins + txouts + nLocktime + nHashType
+<<<<<<< HEAD
         print("PREIMAGE --------", preimage)
+=======
+>>>>>>> origin/sendcoins
         return preimage
 
     def is_segwit(self):
         return any(self.is_segwit_input(x) for x in self.inputs())
 
     def serialize(self, estimate_size=False, witness=True):
-        nTimestamp = int_to_hex(int(time.time()), 4)
+        nTimestamp = int_to_hex(self.timestamp, 4)
         nVersion = int_to_hex(self.version, 4)
+        #print("nVersion -- ", nVersion)
         nLocktime = int_to_hex(0,4) 
+        #print("nLocktime -- ", nVersion)
         inputs = self.inputs()
         outputs = self.outputs()
         txins = var_int(len(inputs)) + ''.join(self.serialize_input(txin, self.input_script(txin, estimate_size)) for txin in inputs)
@@ -1046,14 +1062,13 @@ class Transaction:
                 continue
             signatures = list(filter(None, txin.get('signatures',[])))
             s += len(signatures)
-            r += txin.get('num_sig',-1)
-        r = 0
-        s = 0
+            r += txin.get('num_sig',-1)        
         return s, r
 
     def is_complete(self):
         s, r = self.signature_count()
         return r == s
+    
 
     def sign(self, keypairs):
         for i, txin in enumerate(self.inputs()):
@@ -1076,6 +1091,8 @@ class Transaction:
                     self._inputs[i] = txin
         print_error("is_complete", self.is_complete())
         self.raw = self.serialize()
+
+
 
     def sign_txin(self, txin_index, privkey_bytes):
         pre_hash = Hash(bfh(self.serialize_preimage(txin_index)))

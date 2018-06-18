@@ -43,9 +43,12 @@ from . import blockchain
 from .version import ELECTRUM_VERSION, PROTOCOL_VERSION
 from .i18n import _
 
+<<<<<<< HEAD
 import inspect
 
 
+=======
+>>>>>>> origin/sendcoins
 NODES_RETRY_INTERVAL = 60
 SERVER_RETRY_INTERVAL = 10
 
@@ -808,22 +811,23 @@ class Network(util.DaemonThread):
         #interface.print_error("requesting header %d" % height)        
         self.queue_request('blockchain.block.get_header', [height], interface)
         interface.request = height
+<<<<<<< HEAD
         interface.req_time = time.time()        
         #print (inspect.stack()[1][3], "-> request_header", height, interface.request, interface.req_time)
+=======
+        interface.req_time = time.time()   
+>>>>>>> origin/sendcoins
 
     def on_get_header(self, interface, response):        
         '''Handle receiving a single block header'''
         header = response.get('result')
-        ##print("header ---", header)
-        ##print("interface ---", interface)
+
         if not header:
             interface.print_error(response)
             self.connection_down(interface.server)
             return
         height = header.get('block_height')
-        #print (inspect.stack()[1][3], "-> on_get_header", response.get('result'), height)
-        
-        #print("height ---", height, interface.mode)
+
         if interface.request != height:
             interface.print_error("unsolicited header",interface.request, height)
             self.connection_down(interface.server)
@@ -831,8 +835,8 @@ class Network(util.DaemonThread):
         chain = blockchain.check_header(header)
         
         if interface.mode == 'backward':
-            can_connect = blockchain.can_connect(header)
-            #print("can_connect ---", can_connect)
+            can_connect = blockchain.can_connect(header) 
+
             if can_connect and can_connect.catch_up is None:
                 interface.mode = 'catch_up'
                 interface.blockchain = can_connect
@@ -856,7 +860,6 @@ class Network(util.DaemonThread):
                     delta = interface.tip - height
                     next_height = max(self.max_checkpoint(), interface.tip - 2 * delta) 
                     next_height = next_height + 1
-                    ##print("next_height ---", next_height, self.max_checkpoint(), interface.tip, delta)
 
         elif interface.mode == 'binary':
             if chain:
@@ -1002,8 +1005,6 @@ class Network(util.DaemonThread):
         self.on_stop()
 
     def on_notify_header(self, interface, header_dict):
-        ##print("===========================on_notify_header ========================= ")
-        #print (inspect.stack()[1][3], "-> on_notify_header", header_dict['hex'], header_dict['height'], self.max_checkpoint())
         header_hex, height = header_dict['hex'], header_dict['height']
         header = blockchain.deserialize_header(bfh(header_hex), height)
 
@@ -1015,7 +1016,6 @@ class Network(util.DaemonThread):
         if interface.mode != 'default':
             return
         b = blockchain.check_header(header)
-        #print ("BLOCKCHAIN ----------------", b)
         if b:
             interface.blockchain = b
             self.switch_lagging_interface()
@@ -1046,7 +1046,6 @@ class Network(util.DaemonThread):
                 self.request_header(interface, 0)
             else:
                 self.print_error("chain already catching up with", chain.catch_up.server)
-        ##print("===========================on_notify_header ========================= ")
 
     def blockchain(self):
         if self.interface and self.interface.blockchain is not None:
@@ -1104,12 +1103,10 @@ class Network(util.DaemonThread):
         return True, out
 
     def export_checkpoints(self, path):
-        ##print("ARE WE HERE---------------")
         # run manually from the console to generate checkpoints
         cp = self.blockchain().get_checkpoints()
         with open(path, 'w', encoding='utf-8') as f:
             f.write(json.dumps(cp, indent=4))
 
     def max_checkpoint(self):
-        #print (inspect.stack()[1][3], "-> max_checkpoint", len(constants.net.CHECKPOINTS) * 2016 - 1)
         return max(0, len(constants.net.CHECKPOINTS) * 2016 - 1)
