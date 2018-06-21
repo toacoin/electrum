@@ -23,7 +23,7 @@ if [ -d ./electrum ]; then
   rm ./electrum -rf
 fi
 
-git clone https://github.com/spesmilo/electrum -b master
+git clone https://github.com/toacoin/electrum -b master
 
 pushd electrum
 if [ ! -z "$1" ]; then
