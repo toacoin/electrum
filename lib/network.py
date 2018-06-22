@@ -718,6 +718,7 @@ class Network(util.DaemonThread):
         # Responses to connection attempts?
         while not self.socket_queue.empty():
             server, socket = self.socket_queue.get()
+            server=server.replace(" ", "")
             if server in self.connecting:
                 self.connecting.remove(server)
             if socket:
