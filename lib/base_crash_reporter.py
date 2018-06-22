@@ -1,4 +1,4 @@
-# Electrum - lightweight Bitcoin client
+# Electrum for TOACoin
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files
@@ -42,7 +42,7 @@ class BaseCrashReporter(object):
 
 <h2>Additional information</h2>
 <ul>
-  <li>Electrum version: {app_version}</li>
+  <li>Electrum-TOA version: {app_version}</li>
   <li>Operating system: {os}</li>
   <li>Wallet type: {wallet_type}</li>
   <li>Locale: {locale}</li>
