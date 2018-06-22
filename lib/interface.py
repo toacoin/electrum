@@ -32,6 +32,7 @@ import time
 import traceback
 
 import requests
+import inspect
 
 from .util import print_error
 
@@ -99,6 +100,7 @@ class TcpConnection(threading.Thread, util.PrintError):
         return False
 
     def get_simple_socket(self):
+        print(inspect.stack()[1][3], "-> get_simple_socket")
         try:
             l = socket.getaddrinfo('80.208.226.12', 50002, socket.AF_UNSPEC, socket.SOCK_STREAM)            
         except socket.gaierror as e:
@@ -155,6 +157,7 @@ class TcpConnection(threading.Thread, util.PrintError):
                 # get server certificate.
                 # Do not use ssl.get_server_certificate because it does not work with proxy
                 s = self.get_simple_socket()
+                print("GET SOCKET 1" , s)
                 if s is None:
                     return
                 try:
@@ -181,6 +184,7 @@ class TcpConnection(threading.Thread, util.PrintError):
                 is_new = False
 
         s = self.get_simple_socket()
+        print("GET SOCKET 2" , s)
         if s is None:
             return
 
