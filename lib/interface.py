@@ -32,7 +32,6 @@ import time
 import traceback
 
 import requests
-import inspect
 
 from .util import print_error
 
@@ -46,7 +45,6 @@ from . import pem
 def Connection(server, queue, config_path):
     """Makes asynchronous connections to a remote Electrum server.
     Returns the running thread that is making the connection.
-
     Once the thread has connected, it finishes, placing a tuple on the
     queue of the form (server, socket), where socket is None if
     connection failed.
@@ -100,11 +98,10 @@ class TcpConnection(threading.Thread, util.PrintError):
         return False
 
     def get_simple_socket(self):
-        print(inspect.stack()[1][3], "-> get_simple_socket")
         try:
-            l = socket.getaddrinfo('80.208.226.12', 50002, socket.AF_UNSPEC, socket.SOCK_STREAM)            
-        except socket.gaierror as e:
-            self.print_error('80.208.226.12', 50002, socket.AF_UNSPEC, socket.SOCK_STREAM, e, "cannot resolve hostname")
+            l = socket.getaddrinfo(self.host, self.port, socket.AF_UNSPEC, socket.SOCK_STREAM)
+        except socket.gaierror:
+            self.print_error("cannot resolve hostname")
             return
         e = None
         for res in l:
@@ -157,7 +154,6 @@ class TcpConnection(threading.Thread, util.PrintError):
                 # get server certificate.
                 # Do not use ssl.get_server_certificate because it does not work with proxy
                 s = self.get_simple_socket()
-                print("GET SOCKET 1" , s)
                 if s is None:
                     return
                 try:
@@ -176,7 +172,7 @@ class TcpConnection(threading.Thread, util.PrintError):
                 cert = re.sub("([^\n])-----END CERTIFICATE-----","\\1\n-----END CERTIFICATE-----",cert)
                 temporary_path = cert_path + '.temp'
                 util.assert_datadir_available(self.config_path)
-                with open(temporary_path, "w", encoding='UTF-8') as f:
+                with open(temporary_path, "w", encoding='utf-8') as f:
                     f.write(cert)
                     f.flush()
                     os.fsync(f.fileno())
@@ -184,7 +180,6 @@ class TcpConnection(threading.Thread, util.PrintError):
                 is_new = False
 
         s = self.get_simple_socket()
-        print("GET SOCKET 2" , s)
         if s is None:
             return
 
@@ -207,7 +202,7 @@ class TcpConnection(threading.Thread, util.PrintError):
                     os.rename(temporary_path, rej)
                 else:
                     util.assert_datadir_available(self.config_path)
-                    with open(cert_path, encoding='UTF-8') as f:
+                    with open(cert_path, encoding='utf-8') as f:
                         cert = f.read()
                     try:
                         b = pem.dePem(cert, 'CERTIFICATE')
@@ -247,7 +242,6 @@ class TcpConnection(threading.Thread, util.PrintError):
 class Interface(util.PrintError):
     """The Interface class handles a socket connected to a single remote
     Electrum server.  Its exposed API is:
-
     - Member functions close(), fileno(), get_responses(), has_timed_out(),
       ping_required(), queue_request(), send_requests()
     - Member variable server.
@@ -397,7 +391,7 @@ def test_certificates():
     certs = os.listdir(mydir)
     for c in certs:
         p = os.path.join(mydir,c)
-        with open(p, encoding='UTF-8') as f:
+        with open(p, encoding='utf-8') as f:
             cert = f.read()
         check_cert(c, cert)
 
