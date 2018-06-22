@@ -1,6 +1,6 @@
 #!/bin/bash
 
-NAME_ROOT=electrum
+NAME_ROOT=electrum-toa
 PYTHON_VERSION=3.5.4
 
 # These settings probably don't need any change
@@ -49,7 +49,7 @@ for i in ./locale/*; do
 done
 popd
 
-VERSION=`git describe --tags --dirty`
+VERSION=`git describe --tags`
 echo "Last commit: $VERSION"
 find -exec touch -d '2000-11-11T11:11:11+00:00' {} +
 popd

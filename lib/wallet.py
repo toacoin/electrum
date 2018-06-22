@@ -608,7 +608,6 @@ class Abstract_Wallet(PrintError):
         label = ''
         height = conf = timestamp = None
         tx_hash = tx.txid()
-        #print("TX_HASH ------------------------", tx_hash)
         if tx.is_complete():
             if tx_hash in self.transactions.keys():
                 label = self.get_label(tx_hash)
@@ -1270,6 +1269,7 @@ class Abstract_Wallet(PrintError):
             outputs[i_max] = (_type, data, 0)
             tx = Transaction.from_io(inputs, outputs[:])
             fee = fee_estimator(tx.estimated_size())
+            fee = max(10000, fee) #TOA tx fee is min 0.0001TOA
             amount = sendable - tx.output_value() - fee
             if amount < 0:
                 raise NotEnoughFunds()
@@ -1420,7 +1420,7 @@ class Abstract_Wallet(PrintError):
                     continue
         if delta > 0:
             raise CannotBumpFee(_('Cannot bump fee') + ': ' + _('could not find suitable outputs'))
-        locktime = self.get_local_height()
+        locktime = 0
         tx_new = Transaction.from_io(inputs, outputs, locktime=locktime)
         tx_new.BIP_LI01_sort()
         return tx_new

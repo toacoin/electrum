@@ -3122,6 +3122,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
         def on_rate(dyn, pos, fee_rate):
             fee = fee_rate * total_size / 1000
             fee = min(max_fee, fee)
+            fee = max(10000, fee) #TOA fee is minimum 0.0001TOA
             fee_e.setAmount(fee)
         fee_slider = FeeSlider(self, self.config, on_rate)
         fee_slider.update()

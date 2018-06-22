@@ -1032,7 +1032,7 @@ class Transaction:
         return sum(val for tp, addr, val in self.outputs())
 
     def get_fee(self):
-        return self.input_value() - self.output_value()
+        return max(10000, self.input_value() - self.output_value()) #TOA tx fee is min 0.0001TOA
 
     def is_final(self):
         return not any([x.get('sequence', 0xffffffff - 1) < 0xffffffff - 1 for x in self.inputs()])
