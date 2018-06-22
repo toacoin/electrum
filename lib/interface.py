@@ -100,7 +100,7 @@ class TcpConnection(threading.Thread, util.PrintError):
 
     def get_simple_socket(self):
         try:
-            l = socket.getaddrinfo(self.host, self.port, socket.AF_INET6, socket.SOCK_STREAM)            
+            l = socket.getaddrinfo(self.host.replace(" ", ""), self.port.replace(" ", ""), socket.AF_UNSPEC, socket.SOCK_STREAM)            
         except socket.gaierror as e:
             self.print_error(self.host, self.port, socket.AF_UNSPEC, socket.SOCK_STREAM, e, "cannot resolve hostname")
             return
