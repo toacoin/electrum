@@ -100,7 +100,7 @@ class TcpConnection(threading.Thread, util.PrintError):
 
     def get_simple_socket(self):
         try:
-            l = socket.getaddrinfo(self.host, self.port, socket.AF_UNSPEC, socket.SOCK_STREAM)            
+            l = socket.getaddrinfo(self.host, self.port, socket.AF_INET6, socket.SOCK_STREAM)            
         except socket.gaierror as e:
             self.print_error(self.host, self.port, socket.AF_UNSPEC, socket.SOCK_STREAM, e, "cannot resolve hostname")
             return
@@ -173,7 +173,7 @@ class TcpConnection(threading.Thread, util.PrintError):
                 cert = re.sub("([^\n])-----END CERTIFICATE-----","\\1\n-----END CERTIFICATE-----",cert)
                 temporary_path = cert_path + '.temp'
                 util.assert_datadir_available(self.config_path)
-                with open(temporary_path, "w", encoding='utf-8') as f:
+                with open(temporary_path, "w", encoding='UTF-8') as f:
                     f.write(cert)
                     f.flush()
                     os.fsync(f.fileno())
@@ -203,7 +203,7 @@ class TcpConnection(threading.Thread, util.PrintError):
                     os.rename(temporary_path, rej)
                 else:
                     util.assert_datadir_available(self.config_path)
-                    with open(cert_path, encoding='utf-8') as f:
+                    with open(cert_path, encoding='UTF-8') as f:
                         cert = f.read()
                     try:
                         b = pem.dePem(cert, 'CERTIFICATE')
@@ -393,7 +393,7 @@ def test_certificates():
     certs = os.listdir(mydir)
     for c in certs:
         p = os.path.join(mydir,c)
-        with open(p, encoding='utf-8') as f:
+        with open(p, encoding='UTF-8') as f:
             cert = f.read()
         check_cert(c, cert)
 
