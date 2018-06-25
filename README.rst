@@ -1,8 +1,8 @@
-Electrum - Lightweight Bitcoin client
+TOA Lightweight client (based on Electrum)
 =====================================
 
 ::
-
+ELECTRUM
   Licence: MIT Licence
   Author: Thomas Voegtlin
   Language: Python
