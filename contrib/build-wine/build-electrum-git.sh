@@ -1,6 +1,6 @@
 #!/bin/bash
 
-NAME_ROOT=electrum-toa
+NAME_ROOT=electrum
 PYTHON_VERSION=3.5.4
 
 # These settings probably don't need any change
@@ -52,6 +52,9 @@ done
 popd
 
 VERSION=`git describe --tags`
+VERSION=`echo toa-$VERSION`
+echo $VERSION
+read -p "WAIT"
 echo "Last commit: $VERSION"
 find -exec touch -d '2000-11-11T11:11:11+00:00' {} +
 popd
