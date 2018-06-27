@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict><key>CFBundleDisplayName</key>
+<string>Electrum</string>
+<key>CFBundleName</key>
+<string>Electrum</string>
+<key>CFBundleIdentifier</key>
+<string>Electrum</string>
+<key>CFBundleExecutable</key>
+<string>MacOS/Electrum</string>
+<key>CFBundleIconFile</key>
+<string>electrum.icns</string>
+<key>CFBundleInfoDictionaryVersion</key>
+<string>6.0</string>
+<key>CFBundlePackageType</key>
+<string>APPL</string>
+<key>CFBundleShortVersionString</key>
+<string>3.1.3-274-gb2482a04-dirty</string>
+<key>LSBackgroundOnly</key>
+<string>0</string>
+<key>NSHighResolutionCapable</key>
+<string>True</string>
+<key>NSSupportsAutomaticGraphicsSwitching</key>
+<string>True</string>
+</dict>
+</plist>
