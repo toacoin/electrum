@@ -54,7 +54,7 @@ popd
 VERSION=`git describe --tags`
 VERSION=`echo toa-$VERSION`
 echo $VERSION
-read -p "WAIT"
+
 echo "Last commit: $VERSION"
 find -exec touch -d '2000-11-11T11:11:11+00:00' {} +
 popd
