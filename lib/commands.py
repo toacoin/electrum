@@ -132,7 +132,7 @@ class Commands:
     @command('wn')
     def restore(self, text):
         """Restore a wallet from text. Text can be a seed phrase, a master
-        public key, a master private key, a list of bitcoin addresses
+        public key, a master private key, a list of TOA addresses
         or bitcoin private keys. If you want to be prompted for your
         seed, type '?' or ':' (concealed) """
         raise Exception('Not a JSON-RPC command')
@@ -465,7 +465,7 @@ class Commands:
 
     @command('w')
     def setlabel(self, key, label):
-        """Assign a label to an item. Item may be a bitcoin address or a
+        """Assign a label to an item. Item may be a TOA address or a
         transaction ID"""
         self.wallet.set_label(key, label)
 
@@ -684,8 +684,8 @@ class Commands:
 
 param_descriptions = {
     'privkey': 'Private key. Type \'?\' to get a prompt.',
-    'destination': 'Bitcoin address, contact or alias',
-    'address': 'Bitcoin address',
+    'destination': 'TOA address, contact or alias',
+    'address': 'TOA address',
     'seed': 'Seed phrase',
     'txid': 'Transaction ID',
     'pos': 'Position',
