@@ -4,3 +4,4 @@ keepkey
 btchip-python
 websocket-client
 hidapi
+scrypt>=0.6.0

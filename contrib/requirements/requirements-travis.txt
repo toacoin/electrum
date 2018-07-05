@@ -1,3 +1,4 @@
 tox
 python-coveralls
 tox-travis
+scrypt>=0.6.0
