@@ -93,14 +93,13 @@ class BaseWizard(object):
     def new(self):
         name = os.path.basename(self.storage.path)
         title = _("Create") + ' ' + name
-        message = '\n'.join([
-            _("What kind of wallet do you want to create?")
-        ])
+        message = '\n'
+        #For now, TOA can only support the standard wallet
         wallet_kinds = [
             ('standard',  _("Standard wallet")),
-            ('2fa', _("Wallet with two-factor authentication")),
-            ('multisig',  _("Multi-signature wallet")),
-            ('imported',  _("Import Bitcoin addresses or private keys")),
+            #('2fa', _("Wallet with two-factor authentication")),
+            #('multisig',  _("Multi-signature wallet")),
+            #('imported',  _("Import Bitcoin addresses or private keys")),
         ]
         choices = [pair for pair in wallet_kinds if pair[0] in wallet_types]
         self.choice_dialog(title=title, message=message, choices=choices, run_next=self.on_wallet_type)
@@ -146,7 +145,7 @@ class BaseWizard(object):
             choices = [
                 ('choose_seed_type', _('Create a new seed')),
                 ('restore_from_seed', _('I already have a seed')),
-                ('restore_from_key', _('Use a master key')),
+                #('restore_from_key', _('Use a master key')),
             ]
             if not self.is_kivy:
                 choices.append(('choose_hw_device',  _('Use a hardware device')))
