@@ -554,14 +554,14 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
         d = self.network.get_donation_address()
         if d:
             host = self.network.get_parameters()[0]
-            self.pay_to_URI('bitcoin:%s?message=donation for %s'%(d, host))
+            self.pay_to_URI('toa:%s?message=donation for %s'%(d, host))
         else:
             self.show_error(_('No donation address for this server'))
 
     def show_about(self):
         QMessageBox.about(self, "Electrum - TOA ",
             _("Version")+" %s" % (self.wallet.electrum_version) + "\n\n" +
-                _("This is an Electrum wallet ported specifically for TOA and benefits from original's features and improvements, such as being lightweight and deterministic (no need for regualr backups since the wallet can be reconstructed from the passphrase.)"  + "\n\n"))
+                _("This is an Electrum wallet ported specifically for TOA and benefits from original's features and improvements, such as being lightweight and deterministic (no need for regular backups since the wallet can be reconstructed from the passphrase.)"  + "\n\n"))
 
     def show_report_bug(self):
         msg = ' '.join([
@@ -2316,7 +2316,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
         if not data:
             return
         # if the user scanned a bitcoin URI
-        if str(data).startswith("bitcoin:"):
+        if str(data).startswith("toa:"):
             self.pay_to_URI(data)
             return
         # else if the user scanned an offline signed tx
