@@ -283,7 +283,10 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
 
     def on_error(self, exc_info):
         if not isinstance(exc_info[1], UserCancelled):
-            traceback.print_exception(*exc_info)
+            try:
+                traceback.print_exception(*exc_info)
+            except OSError:
+                pass  # see #4418; try to at least show popup:
             self.show_error(str(exc_info[1]))
 
     def on_network(self, event, *args):
@@ -562,6 +565,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
         QMessageBox.about(self, "Electrum - TOA ",
             _("Version")+" %s" % (self.wallet.electrum_version) + "\n\n" +
                 _("This is an Electrum wallet ported specifically for TOA and benefits from original's features and improvements, such as being lightweight and deterministic (no need for regular backups since the wallet can be reconstructed from the passphrase.)"  + "\n\n"))
+
 
     def show_report_bug(self):
         msg = ' '.join([
@@ -1118,7 +1122,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
         def on_fee_or_feerate(edit_changed, editing_finished):
             edit_other = self.feerate_e if edit_changed == self.fee_e else self.fee_e
             if editing_finished:
-                if not edit_changed.get_amount():
+                if edit_changed.get_amount() is None:
                     # This is so that when the user blanks the fee and moves on,
                     # we go back to auto-calculate mode and put a fee back.
                     edit_changed.setModified(False)
@@ -1202,9 +1206,10 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
         self.payto_e.textChanged.connect(self.update_fee)
         self.amount_e.textEdited.connect(self.update_fee)
 
-        def reset_max(t):
+        def reset_max(text):
             self.is_max = False
-            self.max_button.setEnabled(not bool(t))
+            enable = not bool(text) and not self.amount_e.isReadOnly()
+            self.max_button.setEnabled(enable)
         self.amount_e.textEdited.connect(reset_max)
         self.fiat_send_e.textEdited.connect(reset_max)
 
@@ -1337,7 +1342,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
             # actual fees often differ somewhat.
             if freeze_feerate or self.fee_slider.is_active():
                 displayed_feerate = self.feerate_e.get_amount()
-                if displayed_feerate:
+                if displayed_feerate is not None:
                     displayed_feerate = quantize_feerate(displayed_feerate)
                 else:
                     # fallback to actual fee
@@ -1649,8 +1654,9 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
     def prepare_for_payment_request(self):
         self.show_send_tab()
         self.payto_e.is_pr = True
-        for e in [self.payto_e, self.amount_e, self.message_e]:
+        for e in [self.payto_e, self.message_e]:
             e.setFrozen(True)
+        self.lock_amount(True)
         self.payto_e.setText(_("please wait..."))
         return True
 
@@ -2786,6 +2792,18 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
         on_video_device = lambda x: self.config.set_key("video_device", qr_combo.itemData(x), True)
         qr_combo.currentIndexChanged.connect(on_video_device)
         gui_widgets.append((qr_label, qr_combo))
+
+        colortheme_combo = QComboBox()
+        colortheme_combo.addItem(_('Light'), 'default')
+        colortheme_combo.addItem(_('Dark'), 'dark')
+        index = colortheme_combo.findData(self.config.get('qt_gui_color_theme', 'default'))
+        colortheme_combo.setCurrentIndex(index)
+        colortheme_label = QLabel(_('Color theme') + ':')
+        def on_colortheme(x):
+            self.config.set_key('qt_gui_color_theme', colortheme_combo.itemData(x), True)
+            self.need_restart = True
+        colortheme_combo.currentIndexChanged.connect(on_colortheme)
+        gui_widgets.append((colortheme_label, colortheme_combo))
 
         usechange_cb = QCheckBox(_('Use change addresses'))
         usechange_cb.setChecked(self.wallet.use_change)
