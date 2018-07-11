@@ -44,7 +44,7 @@ def inv_dict(d):
 
 base_units = {'TOA':8, 'mTOA':5, 'bits':2, 'sat':0}
 base_units_inverse = inv_dict(base_units)
-base_units_list = ['TOA', 'mTOA', 'bits', 'sat']  # list(dict) does not guarantee order
+base_units_list = ['TOA', 'mTOA']  # list(dict) does not guarantee order
 
 
 def decimal_point_to_base_unit_name(dp: int) -> str:
