@@ -13,7 +13,8 @@ src_dir=$(dirname "$0")
 cd $src_dir/../..
 
 export PYTHONHASHSEED=22
-VERSION=`git describe --tags --dirty`
+VERSION=`git describe --tags`
+VERSION=`echo toa-$VERSION`
 
 which brew > /dev/null 2>&1 || fail "Please install brew from https://brew.sh/ to continue"
 
@@ -47,8 +48,12 @@ rm  -rf $BUILDDIR > /dev/null 2>&1
 mkdir $BUILDDIR
 
 cp -R ./contrib/deterministic-build/electrum-locale/locale/ ./lib/locale/
-cp    ./contrib/deterministic-build/electrum-icons/icons_rc.py ./gui/qt/
 
+cp ~/electrum/gui/qt/icons_rc.py ./gui/qt/
+
+ls -la ./gui/qt
+ 
+read -p “test”
 
 info "Downloading libusb..."
 curl https://homebrew.bintray.com/bottles/libusb-1.0.22.el_capitan.bottle.tar.gz | \
