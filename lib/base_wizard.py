@@ -500,16 +500,11 @@ class BaseWizard(object):
         self.show_xpub_dialog(xpub=xpub, run_next=lambda x: self.run('choose_keystore'))
 
     def choose_seed_type(self):
-        title = _('Choose Seed type')
-        message = ' '.join([
-            _("The type of addresses used by your wallet will depend on your seed."),
-            _("Segwit wallets use bech32 addresses, defined in BIP173."),
-            _("Please note that websites and other wallets may not support these addresses yet."),
-            _("Thus, you might want to keep using a non-segwit wallet in order to be able to receive bitcoins during the transition period.")
-        ])
+        title = _('Seed type')
+        message = ' '
         choices = [
             ('create_standard_seed', _('Standard')),
-            ('create_segwit_seed', _('Segwit')),
+            #('create_segwit_seed', _('Segwit')),
         ]
         self.choice_dialog(title=title, message=message, choices=choices, run_next=self.run)
 
