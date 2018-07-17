@@ -1,7 +1,7 @@
 #!/bin/bash
 
 NAME_ROOT=electrum
-PYTHON_VERSION=3.5.4
+PYTHON_VERSION=3.6.6
 
 # These settings probably don't need any change
 export WINEPREFIX=/opt/wine64
@@ -18,6 +18,7 @@ set -e
 
 mkdir -p tmp
 cd tmp
+
 
 if [ -d ./electrum ]; then
   rm ./electrum -rf
@@ -36,6 +37,8 @@ if [ ! -z "$1" ]; then
     fi
     git checkout $1
 fi
+
+pushd $WINEPREFIX/drive_c/electrum
 
 
 
@@ -73,6 +76,7 @@ cp -r electrum $WINEPREFIX/drive_c/electrum
 cp electrum/LICENCE .
 cp -r ./electrum/contrib/deterministic-build/electrum-locale/locale $WINEPREFIX/drive_c/electrum/lib/
 cp ~/electrum/gui/qt/icons_rc.py $WINEPREFIX/drive_c/electrum/gui/qt/
+
 
 # Install frozen dependencies
 $PYTHON -m pip install -r ../../deterministic-build/requirements.txt
