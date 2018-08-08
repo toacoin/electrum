@@ -5,11 +5,23 @@
         "t": "41001",
         "version": "1.1"
     },
- 
     "electrum2.toacoin.net": {
         "pruning": "-",
         "s": "50002",
         "t": "41001",
         "version": "1.1"
+    },
+    "electrum3.toacoin.net": {
+        "pruning": "-",
+        "s": "50002",
+        "t": "41001",
+        "version": "1.1"
+    },
+    "electrum4.toacoin.net": {
+        "pruning": "-",
+        "s": "50002",
+        "t": "41001",
+        "version": "1.1"
     }
+    
 }
